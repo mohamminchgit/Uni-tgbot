@@ -4,6 +4,7 @@ from sqlalchemy.pool import QueuePool
 from config import settings
 from bot.models.user import Base, User, ImageAnalysis
 import logging
+from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 
@@ -106,21 +107,38 @@ class DatabaseService:
             # دریافت شایع‌ترین برچسب‌ها
             # این کوئری می‌تواند برای انواع مختلف دیتابیس متفاوت باشد
             # اینجا از سینتکس عمومی استفاده می‌کنیم
-            top_labels = session.query(
-                ImageAnalysis.label, 
-                "COUNT(*) as count"
-            ).group_by(ImageAnalysis.label)\
-            .order_by("count DESC")\
-            .limit(5).all()
+            if total_analyses > 0:
+                # در صورتی که تحلیلی وجود داشته باشد
+                top_labels_query = session.query(
+                    ImageAnalysis.label, 
+                    func.count(ImageAnalysis.id).label("count")
+                ).group_by(ImageAnalysis.label)\
+                .order_by(func.count(ImageAnalysis.id).desc())\
+                .limit(5).all()
+                
+                top_labels = []
+                for label, count in top_labels_query:
+                    top_labels.append((label or "بدون برچسب", count))
+            else:
+                # در صورتی که هیچ تحلیلی وجود نداشته باشد
+                top_labels = []
             
-            return {
+            stats = {
                 "total_users": total_users,
                 "total_analyses": total_analyses,
                 "top_labels": top_labels
             }
+            
+            logger.info(f"آمار دریافت شد: {stats}")
+            return stats
         except Exception as e:
             logger.error(f"خطا در دریافت آمار: {str(e)}")
-            return {}
+            # حتی در صورت خطا، آمار پایه را برمی‌گردانیم
+            return {
+                "total_users": 0,
+                "total_analyses": 0,
+                "top_labels": []
+            }
         finally:
             session.close()
 

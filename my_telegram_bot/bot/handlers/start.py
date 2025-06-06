@@ -45,10 +45,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/start - شروع مجدد ربات\n"
         "/help - نمایش این راهنما\n"
         "/history - مشاهده تاریخچه تحلیل‌های شما\n"
-        "/stats - مشاهده آمار (فقط برای ادمین‌ها)\n\n"
+        "/stats - مشاهده آمار (فقط برای ادمین‌ها آزاد است)\n\n"
         
-        "🧠 *مدل هوش مصنوعی:*\n"
-        "این ربات از مدل پیش‌آموزش‌دیده‌ی MobileNet برای تشخیص اشیاء استفاده می‌کند که قادر به تشخیص بیش از 1000 کلاس مختلف است."
+
+
     )
     
     await update.message.reply_text(help_message, parse_mode='Markdown')
@@ -92,19 +92,19 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # دریافت آمار از دیتابیس
         stats = db_service.get_statistics()
         
-        if not stats:
-            await update.message.reply_text("آماری برای نمایش وجود ندارد.")
-            return
-        
         stats_message = (
             "📈 *آمار ربات:*\n\n"
             f"• تعداد کل کاربران: {stats['total_users']}\n"
             f"• تعداد کل تحلیل‌ها: {stats['total_analyses']}\n\n"
-            "🔝 *برچسب‌های پرتکرار:*\n"
         )
         
-        for i, (label, count) in enumerate(stats.get('top_labels', []), 1):
-            stats_message += f"{i}. {label}: {count} بار\n"
+        # افزودن بخش برچسب‌های پرتکرار
+        if stats.get('top_labels'):
+            stats_message += "🔝 *برچسب‌های پرتکرار:*\n"
+            for i, (label, count) in enumerate(stats.get('top_labels', []), 1):
+                stats_message += f"{i}. {label}: {count} بار\n"
+        else:
+            stats_message += "🔝 *برچسب‌های پرتکرار:*\n  هنوز هیچ تحلیلی انجام نشده است."
         
         await update.message.reply_text(stats_message, parse_mode='Markdown')
     except Exception as e:
